@@ -1,4 +1,4 @@
-package com.mw.object.search.contributor;
+package com.mw.object.search.contributor.basic;
 
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.portal.kernel.log.Log;
@@ -11,20 +11,31 @@ import com.liferay.portal.search.spi.model.index.contributor.ModelDocumentContri
 import java.io.Serializable;
 import java.util.Map;
 
+import org.osgi.service.component.annotations.Component;
+
+@Component(
+	immediate = true,
+	property = {
+		"indexer.class.name=com.liferay.object.model.ObjectDefinition#XXXX", 
+		"indexer.class.name=com.liferay.object.model.ObjectDefinition#YYYY",
+		"indexer.class.name=com.liferay.object.model.ObjectDefinition#ZZZZ"
+	},	
+	service = ModelDocumentContributor.class
+)
 public class CustomObjectEntryDocumentContributor implements ModelDocumentContributor<ObjectEntry> {
+	public interface FIELDS {
+		public static final String OBJECT_ENTRY_CONTENT = "objectEntryContent";
+	}
 
 	@Override
 	public void contribute(Document document, ObjectEntry objectEntry) {
-		
-		_log.info("START >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+		Map<String, Serializable> objectValues = objectEntry.getValues();
 
-		Map<String, Serializable> ojectValues = objectEntry.getValues();
-
-		if (ojectValues.containsKey("objectEntryContent")) {
-			String objectEntryContentValue = (String)ojectValues.get("objectEntryContent");
+		if (objectValues.containsKey(FIELDS.OBJECT_ENTRY_CONTENT)) {
+			String objectEntryContentValue = (String)objectValues.get(FIELDS.OBJECT_ENTRY_CONTENT);
 			
 			if (Validator.isNotNull(objectEntryContentValue)) {
-				document.add(new Field("objectEntryContent", objectEntryContentValue));
+				document.add(new Field(FIELDS.OBJECT_ENTRY_CONTENT, objectEntryContentValue));
 				
 				_log.info("Updated objectEntryContent field on objectEntryId: " + objectEntry.getObjectEntryId());
 			} else {
@@ -33,8 +44,6 @@ public class CustomObjectEntryDocumentContributor implements ModelDocumentContri
 		} else {
 			_log.info("objectEntryContent field not found on objectEntryId: " + objectEntry.getObjectEntryId() + ", default field value will be used...");
 		}
-		
-		_log.info("END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 	}
 	
 	private static Log _log = LogFactoryUtil.getLog(CustomObjectEntryDocumentContributor.class);

@@ -1,9 +1,10 @@
-package com.mw.object.search.contributor;
+package com.mw.object.search.contributor.tracker;
 
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.HashMapDictionaryBuilder;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.search.spi.model.index.contributor.ModelDocumentContributor;
 
 import java.util.Map;
@@ -20,6 +21,7 @@ import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 
 @Component(immediate = true)
+@SuppressWarnings("rawtypes")
 public class CustomObjectModelDocumentContributorTracker {
     
     @Activate
@@ -29,12 +31,14 @@ public class CustomObjectModelDocumentContributorTracker {
         		    "(&" +
         		        "(objectClass=%s)" +
         		        "(indexer.class.name=com.liferay.object.model.ObjectDefinition#*)" +
-        		        "(!(custom.indexer.class.name=*))" +  // Only match if the property is NOT present
+        		        "(!(custom.indexer.class.name=*))" +  // Only match if the property is NOT present. Prevents an infinite loop for the newly registered services...
         		    ")",
         		    ModelDocumentContributor.class.getName()
         		);
 
             Filter filter = bundleContext.createFilter(filterString);
+            
+            _log.info("Starting ModelDocumentContributor<ObjectEntry> tracker...");
 
             _tracker = new ServiceTracker<>(
                 bundleContext,
@@ -47,16 +51,22 @@ public class CustomObjectModelDocumentContributorTracker {
                     	
                         ModelDocumentContributor<ObjectEntry> service = bundleContext.getService(reference);
                         
-                    	String indexerClassName = (String)reference.getProperty("indexer.class.name");
-                    	
-                        ServiceRegistration<ModelDocumentContributor> customServiceRegistration = bundleContext.registerService(
-                        		ModelDocumentContributor.class,
-                        		new CustomObjectEntryDocumentContributor(), 
-                        		HashMapDictionaryBuilder.<String, Object>put("indexer.class.name", indexerClassName).<String, Object>put("custom.indexer.class.name", indexerClassName).build());
+                    	try {
+							String indexerClassName = (String)reference.getProperty("indexer.class.name");
+							
+							if (Validator.isNotNull(indexerClassName)) {
+							    ServiceRegistration<ModelDocumentContributor> customServiceRegistration = bundleContext.registerService(
+							    		ModelDocumentContributor.class,
+							    		new CustomObjectEntryDocumentContributor(), 
+							    		HashMapDictionaryBuilder.<String, Object>put("indexer.class.name", indexerClassName).put("custom.indexer.class.name", indexerClassName).build());
 
-                        _customServiceRegistrations.put(indexerClassName, customServiceRegistration);
-                        
-                        _log.info("Registered CustomObjectEntryDocumentContributor for indexerClassName: " + indexerClassName);           
+							    _customServiceRegistrations.put(indexerClassName, customServiceRegistration);
+							    
+							    _log.info("Registered CustomObjectEntryDocumentContributor for " + indexerClassName);                       		
+							}
+						} catch (Exception e) {
+							_log.error(e.getClass() + ", " + e.getMessage(), e);
+						}        
                         
                         return service;
                     }
@@ -71,26 +81,30 @@ public class CustomObjectModelDocumentContributorTracker {
                     public void removedService(
                         ServiceReference<ModelDocumentContributor<ObjectEntry>> reference,
                         ModelDocumentContributor<ObjectEntry> service) {
-                    	
-                    	String indexerClassName = (String)reference.getProperty("indexer.class.name");
 
                         bundleContext.ungetService(reference);
                         
-                        if (_customServiceRegistrations.containsKey(indexerClassName)) {
-                        	ServiceRegistration<ModelDocumentContributor> customServiceRegistration = _customServiceRegistrations.get(indexerClassName);
-                        	
-                        	customServiceRegistration.unregister();
-                        	
-                        	_customServiceRegistrations.remove(indexerClassName);
-                        	
-                        	_log.info("Unregistered CustomObjectEntryDocumentContributor for indexerClassName: " + indexerClassName);
-                        }
+                        try {
+							String indexerClassName = (String)reference.getProperty("indexer.class.name");
+							
+							if (Validator.isNotNull(indexerClassName) && _customServiceRegistrations.containsKey(indexerClassName)) {
+								ServiceRegistration<ModelDocumentContributor> customServiceRegistration = _customServiceRegistrations.get(indexerClassName);
+								
+								customServiceRegistration.unregister();
+								
+								_customServiceRegistrations.remove(indexerClassName);
+								
+								_log.info("Unregistered CustomObjectEntryDocumentContributor for " + indexerClassName);
+							}
+						} catch (Exception e) {
+							_log.error(e.getClass() + ", " + e.getMessage(), e);
+						}
                     }
                 }
             );
 
             _tracker.open();
-            _log.info("Started tracking ModelDocumentContributor<ObjectEntry> services");
+            _log.info("Started ModelDocumentContributor<ObjectEntry> tracker...");
         } catch (Exception e) {
             _log.error("Failed to start tracker for ModelDocumentContributor<ObjectEntry>", e);
         }
@@ -112,7 +126,7 @@ public class CustomObjectModelDocumentContributorTracker {
     }
     
     private ServiceTracker<ModelDocumentContributor<ObjectEntry>, ModelDocumentContributor<ObjectEntry>> _tracker;    
-    
+   
 	private final Map<String, ServiceRegistration<ModelDocumentContributor>> _customServiceRegistrations = new ConcurrentHashMap<>();    
     
     private static final Log _log = LogFactoryUtil.getLog(CustomObjectModelDocumentContributorTracker.class);
