@@ -37,12 +37,12 @@ public class CustomObjectEntryDocumentContributor implements ModelDocumentContri
 			if (Validator.isNotNull(objectEntryContentValue)) {
 				document.add(new Field(FIELDS.OBJECT_ENTRY_CONTENT, objectEntryContentValue));
 				
-				_log.info("Updated objectEntryContent field on objectEntryId: " + objectEntry.getObjectEntryId());
+				_log.info("Updated objectEntryContent search document field on objectEntryId: " + objectEntry.getObjectEntryId());
 			} else {
-				_log.info("objectEntryContent field empty for objectEntryId: " + objectEntry.getObjectEntryId() + ", default field value will be used...");
+				_log.info("objectEntryContent field empty for objectEntryId: " + objectEntry.getObjectEntryId() + ", default search document field value will be used...");
 			}
 		} else {
-			_log.info("objectEntryContent field not found on objectEntryId: " + objectEntry.getObjectEntryId() + ", default field value will be used...");
+			_log.info("objectEntryContent field not found on objectEntryId: " + objectEntry.getObjectEntryId() + ", default search document field value will be used...");
 		}
 	}
 	
