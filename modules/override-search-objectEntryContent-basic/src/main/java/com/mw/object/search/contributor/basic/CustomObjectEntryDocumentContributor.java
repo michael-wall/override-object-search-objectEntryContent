@@ -11,21 +11,22 @@ import com.liferay.portal.search.spi.model.index.contributor.ModelDocumentContri
 import java.io.Serializable;
 import java.util.Map;
 
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 
 @Component(
 	immediate = true,
-	property = {
-		"indexer.class.name=com.liferay.object.model.ObjectDefinition#XXXX", 
-		"indexer.class.name=com.liferay.object.model.ObjectDefinition#YYYY",
-		"indexer.class.name=com.liferay.object.model.ObjectDefinition#ZZZZ"
-	},	
 	service = ModelDocumentContributor.class
 )
 public class CustomObjectEntryDocumentContributor implements ModelDocumentContributor<ObjectEntry> {
 	public interface FIELDS {
 		public static final String OBJECT_ENTRY_CONTENT = "objectEntryContent";
 	}
+	
+	@Activate
+	protected void activate(Map<String, Object> properties)  throws Exception {
+		_log.info("activated");
+	}	
 
 	@Override
 	public void contribute(Document document, ObjectEntry objectEntry) {
